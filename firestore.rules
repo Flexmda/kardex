@@ -1,0 +1,194 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: empresas
+    // Document ID: auto-id
+    // Fields:
+    //   - nombre: string (required, 1-120)
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: empleados
+    // Document ID: auto-id
+    // Fields:
+    //   - empresaId: string (required)
+    //   - nombre: string (required, 1-160)
+    //   - cedula: string (optional, 0-32)
+    //   - cargo: string (optional, 0-120)
+    //   - fechaIngreso: string YYYY-MM-DD (required)
+    //   - fechaSalida: string YYYY-MM-DD or null (optional)
+    //   - observaciones: string (optional, 0-2000)
+    //
+    // Collection: descargos
+    // Document ID: auto-id
+    // Fields:
+    //   - empleadoId: string (required)
+    //   - empresaId: string (required, denormalized)
+    //   - fechaDescargo: string YYYY-MM-DD (required)
+    //   - periodo: string (required, 1-80)
+    //   - fechaInicio: string YYYY-MM-DD (required)
+    //   - fechaFin: string YYYY-MM-DD (required)
+    //   - dias: number int (required, >= 1)
+    //   - motivo: string (optional, 0-500)
+    //   - responsable: string (optional, 0-160)
+    //
+    // Collection: users
+    // Document ID: Firebase Auth uid
+    // Fields:
+    //   - email: string (required)
+    //   - displayName: string (required)
+    //   - role: string SUPERADMIN | ADMIN | EMPLEADO
+    //   - empresaId: string or null
+    //   - empleadoId: string or null
+    // Writes only from Admin SDK / Cloud Functions.
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function role() {
+      return request.auth.token.role;
+    }
+
+    function isSuperAdmin() {
+      return isAuthenticated() && role() == "SUPERADMIN";
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && role() == "ADMIN";
+    }
+
+    function isEmpleado() {
+      return isAuthenticated() && role() == "EMPLEADO";
+    }
+
+    function claimEmpresaId() {
+      return request.auth.token.empresaId;
+    }
+
+    function claimEmpleadoId() {
+      return request.auth.token.empleadoId;
+    }
+
+    function canAccessEmpresa(empresaId) {
+      return isSuperAdmin()
+        || ((isAdmin() || isEmpleado()) && empresaId is string && empresaId == claimEmpresaId());
+    }
+
+    function isIsoDate(value) {
+      return value is string && value.matches("^\\d{4}-\\d{2}-\\d{2}$");
+    }
+
+    function isOptionalIsoDate(value) {
+      return value == null || isIsoDate(value);
+    }
+
+    function isValidEmpresa(data) {
+      return data.keys().hasOnly(["nombre", "createdAt"])
+        && data.nombre is string
+        && data.nombre.size() >= 1
+        && data.nombre.size() <= 120
+        && data.createdAt is timestamp;
+    }
+
+    function isValidEmpleado(data) {
+      return data.keys().hasOnly([
+          "empresaId", "nombre", "cedula", "cargo",
+          "fechaIngreso", "fechaSalida", "observaciones"
+        ])
+        && data.empresaId is string
+        && data.empresaId.size() >= 1
+        && data.nombre is string
+        && data.nombre.size() >= 1
+        && data.nombre.size() <= 160
+        && data.cedula is string
+        && data.cedula.size() <= 32
+        && data.cargo is string
+        && data.cargo.size() <= 120
+        && isIsoDate(data.fechaIngreso)
+        && isOptionalIsoDate(data.fechaSalida)
+        && data.observaciones is string
+        && data.observaciones.size() <= 2000;
+    }
+
+    function isValidDescargo(data) {
+      return data.keys().hasOnly([
+          "empleadoId", "empresaId", "fechaDescargo", "periodo",
+          "fechaInicio", "fechaFin", "dias", "motivo", "responsable"
+        ])
+        && data.empleadoId is string
+        && data.empleadoId.size() >= 1
+        && data.empresaId is string
+        && data.empresaId.size() >= 1
+        && isIsoDate(data.fechaDescargo)
+        && data.periodo is string
+        && data.periodo.size() >= 1
+        && data.periodo.size() <= 80
+        && isIsoDate(data.fechaInicio)
+        && isIsoDate(data.fechaFin)
+        && data.dias is number
+        && data.dias >= 1
+        && data.dias <= 366
+        && data.motivo is string
+        && data.motivo.size() <= 500
+        && data.responsable is string
+        && data.responsable.size() <= 160;
+    }
+
+    match /empresas/{empresaId} {
+      allow read: if canAccessEmpresa(empresaId);
+      allow create, update: if isSuperAdmin() && isValidEmpresa(request.resource.data);
+      allow delete: if false;
+    }
+
+    match /empleados/{empleadoId} {
+      allow get: if isAuthenticated() && (
+        isSuperAdmin()
+        || (isAdmin() && resource.data.empresaId == claimEmpresaId())
+        || (isEmpleado() && empleadoId == claimEmpleadoId())
+      );
+      allow list: if isSuperAdmin()
+        || (isAdmin() && resource.data.empresaId == claimEmpresaId());
+      allow create: if (isSuperAdmin() || isAdmin())
+        && isValidEmpleado(request.resource.data)
+        && canAccessEmpresa(request.resource.data.empresaId);
+      allow update: if (isSuperAdmin() || isAdmin())
+        && isValidEmpleado(request.resource.data)
+        && canAccessEmpresa(resource.data.empresaId)
+        && canAccessEmpresa(request.resource.data.empresaId);
+      allow delete: if false;
+    }
+
+    match /descargos/{descargoId} {
+      allow get: if isAuthenticated() && (
+        isSuperAdmin()
+        || (isAdmin() && resource.data.empresaId == claimEmpresaId())
+        || (isEmpleado() && resource.data.empleadoId == claimEmpleadoId())
+      );
+      allow list: if isSuperAdmin()
+        || (isAdmin() && resource.data.empresaId == claimEmpresaId())
+        || (isEmpleado() && resource.data.empleadoId == claimEmpleadoId());
+      allow create: if (isSuperAdmin() || isAdmin())
+        && isValidDescargo(request.resource.data)
+        && canAccessEmpresa(request.resource.data.empresaId);
+      allow update: if false;
+      allow delete: if (isSuperAdmin() || isAdmin())
+        && canAccessEmpresa(resource.data.empresaId);
+    }
+
+    match /users/{userId} {
+      allow get: if isAuthenticated() && (
+        request.auth.uid == userId
+        || isSuperAdmin()
+        || (isAdmin() && resource.data.empresaId == claimEmpresaId())
+      );
+      allow list: if isSuperAdmin()
+        || (isAdmin() && resource.data.empresaId == claimEmpresaId());
+      allow create, update, delete: if false;
+    }
+  }
+}

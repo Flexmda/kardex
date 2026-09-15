@@ -1,0 +1,15 @@
+{
+  "name": "kardex",
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix web run dev",
+    "test": "npm --prefix web test",
+    "build": "npm --prefix web run build",
+    "emulators": "firebase emulators:start --project kardex-de-vacaciones",
+    "bootstrap": "node scripts/bootstrap-superadmin.mjs",
+    "deploy": "npm --prefix web run build && firebase deploy --project kardex-de-vacaciones"
+  },
+  "devDependencies": {
+    "firebase-tools": "^14.27.0"
+  }
+}
