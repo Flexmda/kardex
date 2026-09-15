@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Resumen de {{ empresa.nombre }}</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body class="bg-light py-4">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2>Resumen de Kardex</h2>
+                <h5 class="text-muted">{{ empresa.nombre }}</h5>
+            </div>
+            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">Volver</a>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card text-white bg-success shadow-sm">
+                    <div class="card-body">
+                        <h6>Total ganado</h6>
+                        <h3>{{ total_ganado }} días</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-white bg-warning shadow-sm">
+                    <div class="card-body">
+                        <h6>Total tomado</h6>
+                        <h3>{{ total_tomado }} días</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-white bg-primary shadow-sm">
+                    <div class="card-body">
+                        <h6>Saldo total</h6>
+                        <h3>{{ saldo }} días</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-header bg-dark text-white">Detalle por empleado</div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover mb-0 align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Empleado</th>
+                                <th>Cédula</th>
+                                <th>Estado</th>
+                                <th class="text-end">Días ganados</th>
+                                <th class="text-end">Días tomados</th>
+                                <th class="text-end">Saldo</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in resumen %}
+                            <tr>
+                                <td><strong>{{ item.empleado.nombre }}</strong></td>
+                                <td>{{ item.empleado.cedula or 'N/D' }}</td>
+                                <td>{{ 'Retirado' if item.empleado.fecha_salida else 'Activo' }}</td>
+                                <td class="text-end">{{ item.total_ganado }}</td>
+                                <td class="text-end">{{ item.total_tomado }}</td>
+                                <td class="text-end"><strong>{{ item.saldo }}</strong></td>
+                                <td><a href="{{ url_for('empleado', empleado_id=item.empleado.id) }}" class="btn btn-sm btn-outline-primary">Ver kardex</a></td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="7" class="text-center py-4 text-muted">No hay empleados registrados en esta empresa.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="table-dark">
+                            <tr>
+                                <th colspan="3">Totales de {{ empresa.nombre }}</th>
+                                <th class="text-end">{{ total_ganado }}</th>
+                                <th class="text-end">{{ total_tomado }}</th>
+                                <th class="text-end">{{ saldo }}</th>
+                                <th></th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
