@@ -50,6 +50,22 @@ export function calendarDaysInclusive(startIso: string, endIso: string): number 
   return Math.floor(ms / 86400000) + 1;
 }
 
+export function roundDays(value: number) {
+  return Math.round(value * 100) / 100;
+}
+
+export function formatDays(value: number) {
+  return value.toLocaleString("es-EC", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+
+export function proratedDays(cupo: number, start: Date, fullEnd: Date, effectiveEnd: Date) {
+  const full = calendarDaysInclusive(formatIsoDate(start), formatIsoDate(fullEnd));
+  const worked = calendarDaysInclusive(formatIsoDate(start), formatIsoDate(effectiveEnd));
+  if (full <= 0 || worked <= 0) return 0;
+  if (worked >= full) return cupo;
+  return roundDays((cupo * worked) / full);
+}
+
 export function periodRows(empleado: Pick<Empleado, "fechaIngreso" | "fechaSalida">, asOf = new Date()): Omit<KardexRow, "diasTomados" | "descargos" | "saldo">[] {
   const ingreso = parseIsoDate(empleado.fechaIngreso);
   const salida = empleado.fechaSalida
@@ -72,7 +88,7 @@ export function periodRows(empleado: Pick<Empleado, "fechaIngreso" | "fechaSalid
       periodo: `${formatPeriodDate(start)} - ${formatPeriodDate(effectiveEnd)}`,
       desde: start,
       hasta: effectiveEnd,
-      diasGanados: annualDays(serviceYear - 1),
+      diasGanados: proratedDays(annualDays(serviceYear - 1), start, end, effectiveEnd),
       numeroPeriodo: serviceYear,
     });
 
@@ -119,8 +135,7 @@ export function buildKardex(
 
   let saldoAcumulado = 0;
   for (const row of rows) {
-    saldoAcumulado += row.diasGanados;
-    saldoAcumulado -= row.diasTomados;
+    saldoAcumulado = roundDays(saldoAcumulado + row.diasGanados - row.diasTomados);
     row.saldo = saldoAcumulado;
   }
 
@@ -128,7 +143,7 @@ export function buildKardex(
 }
 
 export function kardexTotals(rows: KardexRow[]) {
-  const totalGanado = rows.reduce((sum, row) => sum + row.diasGanados, 0);
-  const totalTomado = rows.reduce((sum, row) => sum + row.diasTomados, 0);
-  return { totalGanado, totalTomado, saldo: totalGanado - totalTomado };
+  const totalGanado = roundDays(rows.reduce((sum, row) => sum + row.diasGanados, 0));
+  const totalTomado = roundDays(rows.reduce((sum, row) => sum + row.diasTomados, 0));
+  return { totalGanado, totalTomado, saldo: roundDays(totalGanado - totalTomado) };
 }

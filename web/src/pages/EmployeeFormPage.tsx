@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { createEmpleado, fetchEmpleado, fetchEmpresas, updateEmpleado } from "../lib/data";
@@ -22,6 +22,8 @@ export default function EmployeeFormPage() {
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [form, setForm] = useState(empty);
   const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
 
   useEffect(() => {
     if (!claims?.role) return;
@@ -50,6 +52,9 @@ export default function EmployeeFormPage() {
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
+    if (savingRef.current) return;
+    savingRef.current = true;
+    setSaving(true);
     setError("");
     try {
       if (editing && empleadoId) {
@@ -60,6 +65,8 @@ export default function EmployeeFormPage() {
         navigate(`/empleado/${id}`);
       }
     } catch (err) {
+      savingRef.current = false;
+      setSaving(false);
       setError(err instanceof Error ? err.message : "No se pudo guardar");
     }
   }
@@ -107,8 +114,8 @@ export default function EmployeeFormPage() {
           onChange={(e) => setForm({ ...form, observaciones: e.target.value })}
         />
         <div className="actions">
-          <button className="btn green" type="submit">
-            {editing ? "Guardar cambios" : "Guardar empleado"}
+          <button className="btn green" type="submit" disabled={saving}>
+            {saving ? "Guardando…" : editing ? "Guardar cambios" : "Guardar empleado"}
           </button>
           <Link className="btn gray" to={editing ? `/empleado/${empleadoId}` : "/"}>
             Cancelar

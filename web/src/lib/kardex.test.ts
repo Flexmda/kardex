@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { annualDays, buildKardex, calendarDaysInclusive, periodRows } from "./kardex";
+import { annualDays, buildKardex, calendarDaysInclusive, periodRows, proratedDays } from "./kardex";
 import type { Descargo, Empleado } from "./types";
 
 const empleadoBase: Empleado = {
@@ -56,7 +56,20 @@ describe("periodRows", () => {
     expect(rows[0].diasGanados).toBe(15);
     expect(rows[1].periodo).toBe("15/01/2021 - 14/01/2022");
     expect(rows[2].periodo).toBe("15/01/2022 - 01/06/2022");
-    expect(rows[2].diasGanados).toBe(15);
+    expect(rows[2].diasGanados).toBe(
+      proratedDays(15, new Date(2022, 0, 15), new Date(2023, 0, 14), new Date(2022, 5, 1)),
+    );
+  });
+
+  it("deja el cupo completo en períodos cerrados y prorratea el abierto", () => {
+    const rows = periodRows({ fechaIngreso: "2015-01-01", fechaSalida: null }, new Date(2026, 8, 15));
+    expect(rows).toHaveLength(12);
+    expect(rows[10].diasGanados).toBe(20);
+    expect(rows[11].periodo).toBe("01/01/2026 - 15/09/2026");
+    expect(rows[11].diasGanados).toBe(
+      proratedDays(20, new Date(2026, 0, 1), new Date(2026, 11, 31), new Date(2026, 8, 15)),
+    );
+    expect(rows[11].diasGanados).toBe(14.14);
   });
 
   it("corta el último período en fecha de salida", () => {
@@ -95,7 +108,10 @@ describe("buildKardex", () => {
     expect(rows[0].diasTomados).toBe(10);
     expect(rows[0].descargos).toHaveLength(1);
     expect(rows[0].saldo).toBe(5);
-    expect(rows[1].saldo).toBe(20);
+    expect(rows[1].diasGanados).toBe(
+      proratedDays(15, new Date(2021, 0, 15), new Date(2022, 0, 14), new Date(2021, 0, 20)),
+    );
+    expect(rows[1].saldo).toBe(5.25);
   });
 
   it("si el período no coincide, usa fechaInicio", () => {

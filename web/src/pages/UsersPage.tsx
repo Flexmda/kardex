@@ -37,6 +37,10 @@ export default function UsersPage() {
   }, [claims]);
 
   const empleadosFiltrados = empleados.filter((item) => item.empresaId === empresaId);
+  const empresaNombre = (id: string | null) =>
+    id ? empresas.find((empresa) => empresa.id === id)?.nombre || id : "—";
+  const empleadoNombre = (id: string | null) =>
+    id ? empleados.find((empleado) => empleado.id === id)?.nombre || id : "—";
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -133,8 +137,8 @@ export default function UsersPage() {
                 <td>
                   <span className="badge">{item.role}</span>
                 </td>
-                <td>{item.empresaId || "—"}</td>
-                <td>{item.empleadoId || "—"}</td>
+                <td>{empresaNombre(item.empresaId)}</td>
+                <td>{empleadoNombre(item.empleadoId)}</td>
               </tr>
             ))}
           </tbody>

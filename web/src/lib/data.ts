@@ -1,4 +1,4 @@
-import { collection, doc, getDoc, getDocs, orderBy, query, serverTimestamp, addDoc, updateDoc, deleteDoc, where, type DocumentData } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, orderBy, query, serverTimestamp, addDoc, setDoc, updateDoc, deleteDoc, where, type DocumentData } from "firebase/firestore";
 import { db } from "./firebase";
 import type { AuthClaims, Descargo, Empleado, Empresa, UserProfile } from "./types";
 
@@ -77,7 +77,8 @@ async function hydrateEmpleado(id: string, data: DocumentData): Promise<Empleado
 export type EmpleadoInput = Omit<Empleado, "id" | "empresaNombre">;
 
 export async function createEmpleado(input: EmpleadoInput) {
-  const ref = await addDoc(collection(db, "empleados"), payloadEmpleado(input));
+  const ref = doc(collection(db, "empleados"));
+  await setDoc(ref, payloadEmpleado(input));
   return ref.id;
 }
 

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { fetchDescargos, fetchEmpleadosByEmpresa, fetchEmpresas } from "../lib/data";
-import { buildKardex, kardexTotals } from "../lib/kardex";
+import { buildKardex, formatDays, kardexTotals, roundDays } from "../lib/kardex";
 import type { Empleado, Empresa } from "../lib/types";
 
 type Resumen = {
@@ -48,9 +48,9 @@ export default function ReporteEmpresaPage() {
   if (error) return <div className="alert warn">{error}</div>;
   if (!empresa) return <p>Cargando…</p>;
 
-  const totalGanado = resumen.reduce((sum, item) => sum + item.totalGanado, 0);
-  const totalTomado = resumen.reduce((sum, item) => sum + item.totalTomado, 0);
-  const saldo = totalGanado - totalTomado;
+  const totalGanado = roundDays(resumen.reduce((sum, item) => sum + item.totalGanado, 0));
+  const totalTomado = roundDays(resumen.reduce((sum, item) => sum + item.totalTomado, 0));
+  const saldo = roundDays(totalGanado - totalTomado);
 
   return (
     <>
@@ -66,15 +66,15 @@ export default function ReporteEmpresaPage() {
       <div className="grid">
         <div className="stat-card green">
           <h6>Total ganado</h6>
-          <div className="stat">{totalGanado} días</div>
+          <div className="stat">{formatDays(totalGanado)} días</div>
         </div>
         <div className="stat-card warn">
           <h6>Total tomado</h6>
-          <div className="stat">{totalTomado} días</div>
+          <div className="stat">{formatDays(totalTomado)} días</div>
         </div>
         <div className="stat-card info">
           <h6>Saldo total</h6>
-          <div className="stat">{saldo} días</div>
+          <div className="stat">{formatDays(saldo)} días</div>
         </div>
       </div>
       <div className="card table-card">
@@ -99,10 +99,10 @@ export default function ReporteEmpresaPage() {
                 </td>
                 <td>{item.empleado.cedula || "N/D"}</td>
                 <td>{item.empleado.fechaSalida ? "Retirado" : "Activo"}</td>
-                <td>{item.totalGanado}</td>
-                <td>{item.totalTomado}</td>
+                <td>{formatDays(item.totalGanado)}</td>
+                <td>{formatDays(item.totalTomado)}</td>
                 <td>
-                  <strong>{item.saldo}</strong>
+                  <strong>{formatDays(item.saldo)}</strong>
                 </td>
                 <td>
                   <Link className="btn" to={`/empleado/${item.empleado.id}`}>
@@ -122,9 +122,9 @@ export default function ReporteEmpresaPage() {
           <tfoot>
             <tr>
               <th colSpan={3}>Totales de {empresa.nombre}</th>
-              <th>{totalGanado}</th>
-              <th>{totalTomado}</th>
-              <th>{saldo}</th>
+              <th>{formatDays(totalGanado)}</th>
+              <th>{formatDays(totalTomado)}</th>
+              <th>{formatDays(saldo)}</th>
               <th></th>
             </tr>
           </tfoot>

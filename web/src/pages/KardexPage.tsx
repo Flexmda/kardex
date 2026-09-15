@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { deleteDescargo, fetchDescargos, fetchEmpleado } from "../lib/data";
-import { buildKardex, kardexTotals } from "../lib/kardex";
+import { buildKardex, formatDays, kardexTotals } from "../lib/kardex";
 import { downloadDescargoPdf } from "../lib/pdf";
 import { isManager } from "../lib/roles";
 import type { Empleado, KardexRow } from "../lib/types";
@@ -75,15 +75,15 @@ export default function KardexPage() {
       <div className="grid">
         <div className="stat-card green">
           <h6>Total ganado</h6>
-          <div className="stat">{totals.totalGanado} días</div>
+          <div className="stat">{formatDays(totals.totalGanado)} días</div>
         </div>
         <div className="stat-card warn">
           <h6>Total tomado</h6>
-          <div className="stat">{totals.totalTomado} días</div>
+          <div className="stat">{formatDays(totals.totalTomado)} días</div>
         </div>
         <div className="stat-card info">
           <h6>Saldo actual</h6>
-          <div className="stat">{totals.saldo} días</div>
+          <div className="stat">{formatDays(totals.saldo)} días</div>
         </div>
       </div>
 
@@ -105,10 +105,10 @@ export default function KardexPage() {
               <tr key={row.numeroPeriodo}>
                 <td>{row.numeroPeriodo}</td>
                 <td>{row.periodo}</td>
-                <td>{row.diasGanados}</td>
-                <td>{row.diasTomados}</td>
+                <td>{formatDays(row.diasGanados)}</td>
+                <td>{formatDays(row.diasTomados)}</td>
                 <td>
-                  <strong>{row.saldo}</strong>
+                  <strong>{formatDays(row.saldo)}</strong>
                 </td>
                 <td>
                   {row.descargos.length === 0 ? (
